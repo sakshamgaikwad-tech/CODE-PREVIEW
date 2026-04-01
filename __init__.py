@@ -1,2 +1,1 @@
-# models package
-ue
+# services package
