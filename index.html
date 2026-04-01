@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CODE-PREVIEW — AI Code Review</title>
+  <meta name="description"
+    content="Paste your code and get an instant AI-powered review: bugs, suggestions, quality score and more — powered by Google Gemini." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ── BACKGROUND PARTICLES ── -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">⬡</span>
+      <span class="logo-text">CODE<span class="accent">PREVIEW</span></span>
+    </div>
+    <nav class="nav-links">
+      <span class="badge">Powered by Gemini ✦</span>
+      <span class="badge training-badge" title="AI is using your training_data/ folder">Training Active ✓</span>
+    </nav>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-pill">AI-Powered · Instant · Free</div>
+    <h1 class="hero-title">Review your code<br /><span class="gradient-text">in seconds</span></h1>
+    <p class="hero-sub">Paste any code snippet and get a detailed breakdown of bugs, improvements, and a quality score —
+      powered by Google Gemini.</p>
+  </section>
+
+  <!-- ── MAIN EDITOR CARD ── -->
+  <main class="main-container">
+    <div class="editor-card glass">
+
+      <!-- toolbar -->
+      <div class="editor-toolbar">
+        <div class="toolbar-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <div class="toolbar-controls">
+          <div class="auto-review-wrapper">
+            <input type="checkbox" id="auto-review-toggle" class="toggle-checkbox" />
+            <label for="auto-review-toggle" class="toggle-label">Auto-Review</label>
+          </div>
+          <select id="lang-select" class="lang-select" title="Select language">
+            <option value="auto"> Auto-detect</option>
+            <option value="python">Python</option>
+            <option value="javascript"> JavaScript</option>
+            <option value="typescript"> TypeScript</option>
+            <option value="java"> Java</option>
+            <option value="go"> Go</option>
+            <option value="rust"> Rust</option>
+            <option value="cpp"> C++</option>
+            <option value="c"> C</option>
+            <option value="csharp"> C#</option>
+            <option value="ruby"> Ruby</option>
+            <option value="php"> PHP</option>
+            <option value="swift">Swift</option>
+            <option value="kotlin"> Kotlin</option>
+          </select>
+          <button id="clear-btn" class="btn-ghost" title="Clear editor">Clear</button>
+        </div>
+      </div>
+
+      <!-- code editor -->
+      <div class="editor-area-wrapper">
+        <div class="line-numbers" id="line-numbers">1</div>
+        <textarea id="code-input" class="code-editor" spellcheck="false" autocomplete="off" autocorrect="off"
+          autocapitalize="off" placeholder="// Paste your code here and hit Review ✦"></textarea>
+      </div>
+
+      <!-- context -->
+      <div class="context-row">
+        <input id="context-input" class="context-input" type="text"
+          placeholder="Optional context  (e.g. 'This is a REST API handler')" />
+      </div>
+
+      <!-- submit -->
+      <div class="submit-row">
+        <span id="char-count" class="char-count">0 / 50 000 chars</span>
+        <button id="review-btn" class="btn-primary" onclick="submitReview()">
+          <span class="btn-icon">✦</span>
+          <span class="btn-label">Review Code</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── LOADING STATE ── -->
+    <div id="loading-section" class="loading-section hidden">
+      <div class="loader-ring"></div>
+      <p class="loading-text">Gemini is reviewing your code<span class="dots-anim"></span></p>
+    </div>
+
+    <!-- ── RESULTS ── -->
+    <div id="results-section" class="results-section hidden">
+
+      <!-- score summary -->
+      <div class="summary-row">
+        <div class="score-card glass">
+          <div class="score-ring-wrapper">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="score-bg" cx="60" cy="60" r="50" />
+              <circle class="score-fill" id="score-circle" cx="60" cy="60" r="50" stroke-dasharray="314"
+                stroke-dashoffset="314" />
+            </svg>
+            <span class="score-number" id="score-number">0</span>
+          </div>
+          <p class="score-label">Quality Score</p>
+        </div>
+
+        <div class="summary-card glass">
+          <div class="summary-meta">
+            <span class="meta-chip" id="lang-badge">—</span>
+            <span class="meta-chip dim" id="time-badge">—</span>
+          </div>
+          <p class="summary-text" id="summary-text">—</p>
+        </div>
+      </div>
+
+      <!-- positives -->
+      <div id="positives-section" class="section-block glass">
+        <h2 class="section-title green-glow">✓ What's Good</h2>
+        <ul id="positives-list" class="positives-list"></ul>
+      </div>
+
+      <!-- bugs -->
+      <div id="bugs-section" class="section-block glass">
+        <h2 class="section-title red-glow">⚠ Bugs &amp; Issues</h2>
+        <div id="bugs-list" class="bugs-list"></div>
+      </div>
+
+      <!-- suggestions -->
+      <div id="suggestions-section" class="section-block glass">
+        <h2 class="section-title purple-glow">⬡ Suggestions</h2>
+        <div id="suggestions-list" class="suggestions-list"></div>
+      </div>
+
+      <!-- re-review -->
+      <div class="re-review-row">
+        <button class="btn-ghost-lg" onclick="resetUI()">← Review another snippet</button>
+      </div>
+    </div>
+
+    <!-- ── ERROR ── -->
+    <div id="error-section" class="error-section hidden">
+      <div class="error-card glass">
+        <span class="error-icon">✕</span>
+        <p id="error-text" class="error-text">Something went wrong.</p>
+        <button class="btn-ghost" onclick="resetUI()">Try again</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>Built BY <span class="accent">saksham gaikwad</span> · <span class="accent">Gemini 1.5 Flash</span> · Vanilla JS
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
